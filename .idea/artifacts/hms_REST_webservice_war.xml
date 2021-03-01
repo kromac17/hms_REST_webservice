@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="hms_REST_webservice:war">
+    <output-path>$PROJECT_DIR$/target</output-path>
+    <properties id="maven-jee-properties">
+      <options>
+        <module>hms_REST_webservice</module>
+        <packaging>war</packaging>
+      </options>
+    </properties>
+    <root id="archive" name="hms_REST_webservice-1.0.war">
+      <element id="artifact" artifact-name="hms_REST_webservice:war exploded" />
+    </root>
+  </artifact>
+</component>
