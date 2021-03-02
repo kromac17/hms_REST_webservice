@@ -41,6 +41,7 @@ public class WebResource {
     public List<Auftrag> getAllEnquiries()
     {
         List<Auftrag> list = map.values().stream().collect(Collectors.toList());
+
         return list;
     }
 
@@ -55,6 +56,20 @@ public class WebResource {
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
         return Response.ok(auftrag).build();
+    }
+
+    @DELETE
+    @Path("{id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteEnquirie(@PathParam("id") int id)
+    {
+        Auftrag auftrag = map.get(id);
+        if(auftrag ==null)
+        {
+            return Response.noContent().status(Response.Status.NOT_FOUND).build();
+        }
+        map.remove(id);
+        return Response.noContent().status(Response.Status.OK).build();
     }
 
     @POST
