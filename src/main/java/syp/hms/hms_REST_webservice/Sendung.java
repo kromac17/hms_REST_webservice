@@ -3,15 +3,15 @@ package syp.hms.hms_REST_webservice;
 import java.util.List;
 
 public class Sendung {
-    private boolean komplett_teil;
+    private boolean asTeilpartien;
     private List<Teilpartie> teilpartien;
     private String ladungsArt;
     private int anzahl;
     private boolean versicherung;
     private String eigeneAngabe;
 
-    public Sendung(boolean komplett_teil, List<Teilpartie> teilpartien, String ladungsArt, int anzahl, boolean versicherung, String eigeneAngabe) {
-        this.komplett_teil = komplett_teil;
+    public Sendung(boolean asTeilpartien, List<Teilpartie> teilpartien, String ladungsArt, int anzahl, boolean versicherung, String eigeneAngabe) {
+        this.asTeilpartien = asTeilpartien;
         this.teilpartien = teilpartien;
         this.ladungsArt = ladungsArt;
         this.anzahl = anzahl;
@@ -21,12 +21,12 @@ public class Sendung {
 
     public Sendung() {}
 
-    public boolean isKomplett_teil() {
-        return komplett_teil;
+    public boolean asTeilpartien() {
+        return asTeilpartien;
     }
 
-    public void setKomplett_teil(boolean komplett_teil) {
-        this.komplett_teil = komplett_teil;
+    public void setAsTeilpartien(boolean asTeilpartien) {
+        this.asTeilpartien = asTeilpartien;
     }
 
     public List<Teilpartie> getTeilpartien() {

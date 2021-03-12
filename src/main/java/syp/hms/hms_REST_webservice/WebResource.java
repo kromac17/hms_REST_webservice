@@ -149,12 +149,26 @@ public class WebResource {
     }
 
     @GET
+    @Path("{id}/status/list")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getStatusList(@PathParam("id") int id)
+    {
+        Auftrag auftrag = map.get(id);
+        if(auftrag ==null || auftrag.getAenderungen() == null || auftrag.getAenderungen().equals(""))
+        {
+            return Response.noContent().status(Response.Status.NOT_FOUND).build();
+        }
+        List<Aenderung> list = auftrag.getAenderungen();
+        return Response.ok(list).build();
+    }
+
+    @GET
     @Path("{id}/status/detail")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getStatusDetail(@PathParam("id") int id)
     {
         Auftrag auftrag = map.get(id);
-        if(auftrag ==null || auftrag.getManager() == null || auftrag.getManager().equals(""))
+        if(auftrag ==null || auftrag.getAenderungen() == null || auftrag.getAenderungen().equals(""))
         {
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
@@ -168,7 +182,7 @@ public class WebResource {
     public Response getStatus(@PathParam("id") int id)
     {
         Auftrag auftrag = map.get(id);
-        if(auftrag ==null || auftrag.getManager() == null || auftrag.getManager().equals(""))
+        if(auftrag ==null || auftrag.getStatus() == null || auftrag.getStatus().equals(""))
         {
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }

@@ -11,12 +11,21 @@ public class Auftrag {
     private String status;
     private List<Aenderung> aenderungen;
 
+    //löschen
     public Auftrag(int id, Anfrage anfrage) {
         this.id = id;
         this.anfrage = anfrage;
         this.manager = "";
         this.status = "";
         this.aenderungen = new LinkedList<>();
+    }
+
+    public Auftrag(int id, Anfrage anfrage, String manager, String status, List<Aenderung> aenderungen) {
+        this.id = id;
+        this.anfrage = anfrage;
+        this.manager = manager;
+        this.status = status;
+        this.aenderungen = aenderungen;
     }
 
     public Auftrag() { }
