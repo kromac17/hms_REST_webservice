@@ -5,44 +5,72 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
+import java.time.format.DateTimeFormatter;
 
 public class DAL {
+
+    public List<Auftrag> getAll() throws SQLException, ClassNotFoundException {
+        LinkedList<Auftrag> list = new LinkedList<>();
+
+        String sql = "SELECT anfrageId " +
+                     "FROM sofortanfrage";
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ResultSet rs = ps.executeQuery();
+
+        while (rs.next()){
+            list.add(getAuftrag(rs.getInt("anfrageId")));
+        }
+
+        return list;
+    }
+
     public Auftrag getAuftrag(int id) throws SQLException, ClassNotFoundException {
         //--Aenderungen
-        String sql =    "SELECT *" +
-                        "FROM aenderung" +
-                        "WHERE anfrageId = ?";
+        String sql = "SELECT * " +
+                     "FROM aenderung " +
+                     "WHERE anfrageid = ?";
         PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
         ResultSet rs = ps.executeQuery();
 
         List<Aenderung> aenderungList = new LinkedList<>();
         while (rs.next()){
-            aenderungList.add(new Aenderung(rs.getString("bezeichnung"), LocalDateTime.parse(rs.getString("datum"))));
+            String datum = rs.getString("datumuhrzeit");
+            String[] tokens = datum.split(" ");
+            datum = tokens[0] + "T"+ tokens[1];
+            aenderungList.add(new Aenderung(new Status(rs.getString("titel"), rs.getString("bezeichnung")), LocalDateTime.parse(datum)));
         }
 
         //--Manager-Status-informationen
-        sql =   "SELECT manager, status, informationen" +
-                "FROM sofortanfrage" +
+        sql =   "SELECT manager, informationen " +
+                "FROM sofortanfrage " +
                 "WHERE anfrageId = ?";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
         rs = ps.executeQuery();
         rs.next();
-        String manager = rs.getString("manager");
-        String status = rs.getString("status");
+        Manager manager = new Manager(rs.getString("manager"));
         String informationen = rs.getString("informationen");
 
         //--Unternehmen
-        sql =   "SELECT bezeichnung, vorname, nachnahme, firmenbezeichnung, telefon, email" +
-                "FROM unternehmen u INNER JOIN anrede a ON u.anredeId = a.anredeId" +
+        sql =   "SELECT unternehmenId " +
+                "FROM sofortanfrage " +
                 "WHERE anfrageId = ?";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
         rs = ps.executeQuery();
         rs.next();
+        int unternehmenId = rs.getInt("unternehmenId");
+
+        sql =   "SELECT bezeichnung, vorname, nachname, firmenbezeichnung, telefon, email " +
+                "FROM unternehmen u INNER JOIN anrede a ON u.anredeId = a.anredeId " +
+                "WHERE unternehmenId = ?";
+        ps = Database.getInstance().getPreparedStatement(sql);
+        ps.setInt(1, unternehmenId);
+        rs = ps.executeQuery();
+        rs.next();
         Firma firma = new Firma(rs.getString("firmenbezeichnung"), rs.getString("bezeichnung"),
-                rs.getString("vorname"), rs.getString("nachnahme"), rs.getString("email"), rs.getString("telefon"));
+                rs.getString("vorname"), rs.getString("nachname"), rs.getString("email"), rs.getString("telefon"));
 
         //--Leistung
         boolean messelogistik;
@@ -54,8 +82,8 @@ public class DAL {
         LocalDate ende = null;
         String transportArt = null;
 
-        sql =   "SELECT messeId" +
-                "FROM sofortanfrage" +
+        sql =   "SELECT messeId " +
+                "FROM sofortanfrage " +
                 "WHERE anfrageId = ?";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
@@ -65,8 +93,8 @@ public class DAL {
         try {
             int messeId = rs.getInt("messeId");
             messelogistik = true;
-            sql =   "SELECT messe, stadt, land, startdate, enddate" +
-                    "FROM messe" +
+            sql =   "SELECT messe, stadt, land, startdate, enddate " +
+                    "FROM messe " +
                     "WHERE messeId = ?";
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setInt(1, messeId);
@@ -81,8 +109,8 @@ public class DAL {
             messelogistik = false;
         }
 
-        sql =   "SELECT transportId" +
-                "FROM sofortanfrage" +
+        sql =   "SELECT transportId " +
+                "FROM sofortanfrage " +
                 "WHERE anfrageId = ?";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
@@ -92,8 +120,8 @@ public class DAL {
         try {
             int transportId = rs.getInt("transportId");
             transport = true;
-            sql =   "SELECT transportArt" +
-                    "FROM transport" +
+            sql =   "SELECT transportArt " +
+                    "FROM transport " +
                     "WHERE transportId = ?";
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setInt(1, transportId);
@@ -107,32 +135,38 @@ public class DAL {
         Leistung leistung = new Leistung(transport, messelogistik, messe, land, stadt, start, ende, transportArt);
 
         //--ladestelle
-        sql =   "SELECT land, stadt, plz, datum" +
-                "FROM ladestelle" +
-                "WHERE ladestelleId = (SELECT ladestelleId" +
-                                      "FROM sofortanfrage" +
+        sql =   "SELECT land, stadt, plz, datumuhrzeit " +
+                "FROM ladestelle " +
+                "WHERE ladestelleId = (SELECT ladestelleId " +
+                                      "FROM sofortanfrage " +
                                       "WHERE anfrageId = ?)";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
         rs = ps.executeQuery();
         rs.next();
+        String datum = rs.getString("datumuhrzeit");
+        String[] tokens = datum.split(" ");
+        datum = tokens[0] + "T"+ tokens[1];
         Ladestelle ladestelle = new Ladestelle(rs.getString("land"), rs.getString("stadt"),
-                rs.getString("plz"), LocalDateTime.parse(rs.getString("datum")));
+                rs.getString("plz"), LocalDateTime.parse(datum));
 
-        sql =   "SELECT land, stadt, plz, datum" +
-                "FROM ladestelle" +
-                "WHERE entladestelleId = (SELECT ladestelleId" +
-                                         "FROM sofortanfrage" +
-                                         "WHERE anfrageId = ?)";
+        sql =   "SELECT land, stadt, plz, datumuhrzeit " +
+                "FROM ladestelle " +
+                "WHERE ladestelleId = (SELECT entladestelleId " +
+                                      "FROM sofortanfrage " +
+                                      "WHERE anfrageId = ?)";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
         rs = ps.executeQuery();
         rs.next();
+        datum = rs.getString("datumuhrzeit");
+        tokens = datum.split(" ");
+        datum = tokens[0] + "T"+ tokens[1];
         Ladestelle entladestelle = new Ladestelle(rs.getString("land"), rs.getString("stadt"),
-                rs.getString("plz"), LocalDateTime.parse(rs.getString("datum")));
+                rs.getString("plz"), LocalDateTime.parse(datum));
 
-        sql =   "SELECT ruecktransportId" +
-                "FROM sofortanfrage" +
+        sql =   "SELECT ruecktransportId " +
+                "FROM sofortanfrage " +
                 "WHERE anfrageId = ?";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
@@ -142,8 +176,8 @@ public class DAL {
         Rueckverladung rueckverladung;
         try {
             int ruecktransportId = rs.getInt("ruecktransportId");
-            sql =   "SELECT datumUhrzeit" +
-                    "FROM ruecktransport" +
+            sql =   "SELECT datumUhrzeit " +
+                    "FROM ruecktransport " +
                     "WHERE ruecktransportId = ?";
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setInt(1, ruecktransportId);
@@ -159,8 +193,8 @@ public class DAL {
         boolean asTeilpartien;
         List<Teilpartie> teilpartien = new LinkedList<>();
         try {
-            sql =   "SELECT anzahl, inhalt, laenge, breite, hoehe, gewicht" +
-                    "FROM anfrageteilpartie at INNER JOIN teilpartie t ON at.teilpartieId = t.teilpartieId" +
+            sql =   "SELECT anzahl, inhalt, laenge, breite, hoehe, gewicht " +
+                    "FROM anfrageteilpartie at INNER JOIN teilpartie t ON at.teilpartieId = t.teilpartieId " +
                     "WHERE anfrageId = ?";
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setInt(1, id);
@@ -181,10 +215,10 @@ public class DAL {
         boolean versicherung = false;
         String angabe = null;
         if(!asTeilpartien){
-            sql =   "SELECT bezeichnung, anzahl, versicherung, angabe" +
-                    "FROM komplettladung k INNER JOIN ladungsart l ON k.ladungsartId = l.ladungsartId" +
-                    "WHERE komplettladungId = (SELECT komplettladungId" +
-                                              "FROM sofortanfrage" +
+            sql =   "SELECT bezeichnung, anzahl, versicherung, angabe " +
+                    "FROM komplettladung k INNER JOIN ladungsart l ON k.ladungsartId = l.ladungsartId " +
+                    "WHERE komplettladungId = (SELECT komplettladungId " +
+                                              "FROM sofortanfrage " +
                                               "WHERE anfrageId = ?)";
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setInt(1, id);
@@ -199,38 +233,36 @@ public class DAL {
         Sendung sendung = new Sendung(asTeilpartien, teilpartien, ladungsart, anzahl, versicherung, angabe);
 
         Anfrage anfrage = new Anfrage(firma, leistung, sendung, ladestelle, entladestelle, rueckverladung, informationen);
-        Auftrag auftrag = new Auftrag(id,anfrage,manager,status,aenderungList);
+        Auftrag auftrag = new Auftrag(id,anfrage,manager,aenderungList);
 
         rs.close();
         ps.close();
         return auftrag;
     }
 
-    public int newAuftrag(Anfrage anfrage) throws SQLException, ClassNotFoundException {
+    public int newAuftrag(Anfrage anfrage, Status status) throws SQLException, ClassNotFoundException {
         int id = -1;
         //--ladestelle
-        String sql = "INSERT INTO ladestelle (land,stadt,plz,datumUhrzeit)" +
-                     "VALUES (?,?,?,?)";
+        String sql = "INSERT INTO ladestelle (land,stadt,plz,datumUhrzeit) " +
+                     "VALUES (?,?,?,?) RETURNING ladestelleid";
         PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
         ps.setString(1, anfrage.getLadestelle().getLand());
         ps.setString(2, anfrage.getLadestelle().getStadt());
         ps.setString(3, anfrage.getLadestelle().getPlz());
-        ps.setTimestamp(4, Timestamp.valueOf(anfrage.getLadestelle().getDatum().toString()));
-        ps.execute();
-        ResultSet rs = ps.getGeneratedKeys();
+        ps.setTimestamp(4, Timestamp.valueOf(anfrage.getLadestelle().getDatum()));
+        ResultSet rs = ps.executeQuery();
         rs.next();
         int ladestelleId = rs.getInt(1);
 
         //--entladestelle
-        sql = "INSERT INTO ladestelle (land,stadt,plz,datumUhrzeit)" +
-                "VALUES (?,?,?,?)";
+        sql = "INSERT INTO ladestelle (land,stadt,plz,datumUhrzeit) " +
+                "VALUES (?,?,?,?) RETURNING ladestelleid";
         ps = Database.getInstance().getPreparedStatement(sql);
-        ps.setString(1, anfrage.getLadestelle().getLand());
-        ps.setString(2, anfrage.getLadestelle().getStadt());
-        ps.setString(3, anfrage.getLadestelle().getPlz());
-        ps.setTimestamp(4, Timestamp.valueOf(anfrage.getLadestelle().getDatum().toString()));
-        ps.execute();
-        rs = ps.getGeneratedKeys();
+        ps.setString(1, anfrage.getEntladestelle().getLand());
+        ps.setString(2, anfrage.getEntladestelle().getStadt());
+        ps.setString(3, anfrage.getEntladestelle().getPlz());
+        ps.setTimestamp(4, Timestamp.valueOf(anfrage.getEntladestelle().getDatum()));
+        rs = ps.executeQuery();
         rs.next();
         int entladestelleId = rs.getInt(1);
 
@@ -240,10 +272,11 @@ public class DAL {
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setString(1, anfrage.getFirma().getAnrede());
         rs = ps.executeQuery();
+        rs.next();
         anredeId = rs.getInt("anredeId");
 
-        sql = "INSERT INTO unternhemen (anredeId,vorname,nachname,firmenbeziehung, telefon, email)" +
-                "VALUES (?,?,?,?,?,?)";
+        sql = "INSERT INTO unternehmen (anredeId,vorname,nachname,firmenbezeichnung, telefon, email) " +
+                "VALUES (?,?,?,?,?,?) RETURNING unternehmenid";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, anredeId);
         ps.setString(2, anfrage.getFirma().getVorname());
@@ -251,22 +284,19 @@ public class DAL {
         ps.setString(4, anfrage.getFirma().getFirmenbezeichnung());
         ps.setString(5, anfrage.getFirma().getTelefon());
         ps.setString(6, anfrage.getFirma().getEmail());
-        ps.execute();
-        rs = ps.getGeneratedKeys();
+        rs = ps.executeQuery();
         rs.next();
         int unternehmenId = rs.getInt(1);
 
         //--sofortanfrage
-        sql = "INSERT INTO sofortanfrage (unternehmenId, ladestelleId, entladestelleId, status, informationen)" +
-                "VALUES (?,?,?,?,?,?)";
+        sql = "INSERT INTO sofortanfrage (unternehmenId, ladestelleId, entladestelleId, informationen) " +
+                "VALUES (?,?,?,?) RETURNING anfrageid";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, unternehmenId);
         ps.setInt(2, ladestelleId);
         ps.setInt(3, entladestelleId);
-        ps.setString(4, "angefragt");
-        ps.setString(5, anfrage.getInformation());
-        ps.execute();
-        rs = ps.getGeneratedKeys();
+        ps.setString(4, anfrage.getInformation());
+        rs = ps.executeQuery();
         rs.next();
         id = rs.getInt(1);
 
@@ -276,6 +306,7 @@ public class DAL {
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setString(1, anfrage.getLeistung().getTransportArt());
             rs = ps.executeQuery();
+            rs.next();
             int transportId = rs.getInt("transportId");
 
             sql = "UPDATE sofortanfrage SET transportId = ? WHERE anfrageId = ?";
@@ -287,15 +318,14 @@ public class DAL {
 
         //--messe
         if(anfrage.getLeistung().isMesselogistik()){
-            sql = "INSERT INTO messe (messe, stadt, land, startdate, enddate) VALUES (?,?,?,?,?)";
+            sql = "INSERT INTO messe (messe, stadt, land, startdate, enddate) VALUES (?,?,?,?,?) RETURNING messeid";
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setString(1, anfrage.getLeistung().getMesse());
             ps.setString(2, anfrage.getLeistung().getStadt());
             ps.setString(3, anfrage.getLeistung().getLand());
             ps.setDate(4, Date.valueOf(anfrage.getLeistung().getStart()));
             ps.setDate(5, Date.valueOf(anfrage.getLeistung().getEnde()));
-            ps.execute();
-            rs = ps.getGeneratedKeys();
+            rs = ps.executeQuery();
             rs.next();
             int messeId = rs.getInt(1);
 
@@ -312,17 +342,16 @@ public class DAL {
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setString(1, anfrage.getSendung().getLadungsArt());
             rs = ps.executeQuery();
+            rs.next();
             int ladungsartId = rs.getInt("ladungsartId");
 
-            sql = "INSERT INTO komplettladung (ladungsartId, anzahl, versicherung, angabe) VALUES (?,?,?,?)";
+            sql = "INSERT INTO komplettladung (ladungsartId, anzahl, versicherung, angabe) VALUES (?,?,?,?) RETURNING komplettladungid";
             ps = Database.getInstance().getPreparedStatement(sql);
-            ps.setString(1, anfrage.getLeistung().getMesse());
-            ps.setString(2, anfrage.getLeistung().getStadt());
-            ps.setString(3, anfrage.getLeistung().getLand());
-            ps.setDate(4, Date.valueOf(anfrage.getLeistung().getStart()));
-            ps.setDate(5, Date.valueOf(anfrage.getLeistung().getEnde()));
-            ps.execute();
-            rs = ps.getGeneratedKeys();
+            ps.setInt(1, ladungsartId);
+            ps.setInt(2, anfrage.getSendung().getAnzahl());
+            ps.setBoolean(3, anfrage.getSendung().isVersicherung());
+            ps.setString(4, anfrage.getSendung().getEigeneAngabe());
+            rs = ps.executeQuery();
             rs.next();
             int komplettladungId = rs.getInt(1);
 
@@ -334,7 +363,7 @@ public class DAL {
         }
         else {
             List<Teilpartie> teilpartien = anfrage.getSendung().getTeilpartien();
-            sql = "INSERT INTO teilpartie (anzahl, inhalt, laenge, breite, hoehe, gewicht) VALUES (?,?,?,?,?,?)";
+            sql = "INSERT INTO teilpartie (anzahl, inhalt, laenge, breite, hoehe, gewicht) VALUES (?,?,?,?,?,?) RETURNING teilpartieid";
             PreparedStatement insert = Database.getInstance().getPreparedStatement(sql);
             sql = "INSERT INTO anfrageteilpartie (teilpartieId, anfrageId) VALUES (?,?)";
             PreparedStatement update = Database.getInstance().getPreparedStatement(sql);
@@ -346,8 +375,7 @@ public class DAL {
                 insert.setDouble(4, teilpartien.get(i).getBreite());
                 insert.setDouble(5, teilpartien.get(i).getHoehe());
                 insert.setDouble(6, teilpartien.get(i).getGewicht());
-                insert.execute();
-                rs = insert.getGeneratedKeys();
+                rs = ps.executeQuery();
                 rs.next();
                 int teilpartieId = rs.getInt(1);
 
@@ -357,13 +385,17 @@ public class DAL {
             }
         }
 
-        //--Aenderungen
-        sql = "INSERT INTO aenderung VALUES (?,?,?)";
+        //--initial Aenderung
+        sql = "INSERT INTO aenderung (anfrageid, datumuhrzeit, titel, bezeichnung) " +
+                "VALUES (?,?,?,?)";
         ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
         ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
-        ps.setString(3, "angefragt");
+        ps.setString(3, status.titel);
+        ps.setString(4, status.status);
         ps.execute();
+
+        System.out.println(anfrage.toString());
 
         return id;
     }

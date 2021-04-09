@@ -6,6 +6,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,7 +26,7 @@ public class WebResource {
         map.put(1, new Auftrag(1,
                 new Anfrage(
                     new Firma("Aldrian Stiegen GmbH", "Frau", "Carina", "Aldrian", "carina@stiegen.at", "0660 1234567"),
-                    new Leistung(true, true, "Stadtmesse", "AT", "Graz", LocalDate.now(), LocalDate.now().plusDays(1), "Schiff"),
+                    new Leistung(true, true, "Stadtmesse", "AT", "Graz", LocalDate.now(), LocalDate.now().plusDays(1), "See"),
                     new Sendung(false, null, "Spezial LKW", 3, true, ""),
                     new Ladestelle("Austria", "Leibnitz", "8430", LocalDateTime.now()),
                     new Ladestelle("Austria", "Graz", "8530", LocalDateTime.now().plusDays(1)),
@@ -35,12 +36,29 @@ public class WebResource {
 
         ));
         counter.set(1);
+        DAL dal = new DAL();
+        try {
+            int id = dal.newAuftrag(
+                    new Anfrage(
+                            new Firma("Aldrian Stiegen GmbH", "Frau", "Carina", "Aldrian", "carina@stiegen.at", "0660 1234567"),
+                            new Leistung(true, true, "Stadtmesse", "AT", "Graz", LocalDate.now(), LocalDate.now().plusDays(1), "See"),
+                            new Sendung(false, null, "Spezial LKW", 3, true, ""),
+                            new Ladestelle("Austria", "Leibnitz", "8430", LocalDateTime.now()),
+                            new Ladestelle("Austria", "Graz", "8530", LocalDateTime.now().plusDays(1)),
+                            new Rueckverladung(false, null),
+                            ""
+                    ),
+                    new Status("Angefragt", "Ihre anfrage ist in unserem System eingelangt.")
+            );
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Auftrag> getAllEnquiries()
-    {
-        List<Auftrag> list = map.values().stream().collect(Collectors.toList());
+    public List<Auftrag> getAllEnquiries() throws SQLException, ClassNotFoundException {
+        DAL dal = new DAL();
+        List<Auftrag> list = dal.getAll();
 
         return list;
     }
@@ -48,9 +66,10 @@ public class WebResource {
     @GET
     @Path("{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getEnquirieById(@PathParam("id") int id)
-    {
-        Auftrag auftrag = map.get(id);
+    public Response getEnquirieById(@PathParam("id") int id) throws ClassNotFoundException, SQLException {
+        DAL dal = new DAL();
+
+        Auftrag auftrag = dal.getAuftrag(id);
         if(auftrag ==null)
         {
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
@@ -74,14 +93,15 @@ public class WebResource {
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response newCapture(@Context UriInfo uriInfo, Anfrage anfrage)
-    {
-        int id = counter.incrementAndGet();
-        Auftrag auftrag = new Auftrag(id, anfrage);
-        auftrag.setStatus("angefragt");
-        map.put(id, auftrag);
-        URI location = uriInfo.getAbsolutePathBuilder().path(String.valueOf(id)).build();
-        return Response.created(location).build();
+    public Response newCapture(@Context UriInfo uriInfo, Anfrage anfrage) throws SQLException, ClassNotFoundException {
+        DAL dal = new DAL();
+        Status status = new Status("Angefragt", "Ihre anfrage ist in unserem System eingelangt.");
+        int id = dal.newAuftrag(anfrage, status);
+        if(id > 0){
+            URI location = uriInfo.getAbsolutePathBuilder().path(String.valueOf(id)).build();
+            return Response.created(location).build();
+        }
+        return Response.noContent().status(Response.Status.NOT_FOUND).build();
     }
 
     @PUT
@@ -96,16 +116,16 @@ public class WebResource {
         else {
             old.setId(1);
             old.setAnfrage(anfrage);
-            old.setStatus("geaendert");
+            old.setStatus("Geaendert", "Auftragdetails wurden geandert.");
             map.put(id, old);
             return Response.noContent().status(Response.Status.OK).build();
         }
     }
 
     @PUT
-    @Path("{id}/manager/{manager}")
+    @Path("{id}/manager")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response updateManager(@PathParam("id") int id, @PathParam("manager") String manager)
+    public Response updateManager(@PathParam("id") int id, Manager manager)
     {
         Auftrag auftrag = map.get(id);
         if(auftrag == null) {
@@ -132,9 +152,9 @@ public class WebResource {
     }
 
     @PUT
-    @Path("{id}/status/{status}")
+    @Path("{id}/status")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response updateStatus(@PathParam("id") int id, @PathParam("status") String status)
+    public Response updateStatus(@PathParam("id") int id, Aenderung aenderung)
     {
         Auftrag auftrag = map.get(id);
         if(auftrag == null) {
@@ -142,7 +162,7 @@ public class WebResource {
         }
         else {
             auftrag.setId(id);
-            auftrag.setStatus(status);
+            auftrag.setStatus(aenderung.status.titel, aenderung.status.status);
             map.put(id, auftrag);
             return Response.noContent().status(Response.Status.OK).build();
         }
@@ -176,6 +196,7 @@ public class WebResource {
         return Response.ok(list.get(list.size()-1)).build();
     }
 
+    /*
     @GET
     @Path("{id}/status")
     @Produces(MediaType.APPLICATION_JSON)
@@ -188,4 +209,6 @@ public class WebResource {
         }
         return Response.ok(auftrag.getStatus()).build();
     }
+
+     */
 }

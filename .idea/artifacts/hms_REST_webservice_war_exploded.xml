@@ -13,6 +13,9 @@
         <element id="directory" name="classes">
           <element id="module-output" name="hms_REST_webservice" />
         </element>
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="Maven: postgresql:postgresql:9.1-901-1.jdbc4" />
+        </element>
       </element>
       <element id="directory" name="META-INF">
         <element id="file-copy" path="$PROJECT_DIR$/target/hms_REST_webservice-1.0/META-INF/MANIFEST.MF" />

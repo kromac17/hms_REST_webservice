@@ -7,24 +7,21 @@ import java.util.List;
 public class Auftrag {
     private int id;
     private Anfrage anfrage;
-    private String manager;
-    private String status;
+    private Manager manager;
     private List<Aenderung> aenderungen;
 
     //löschen
     public Auftrag(int id, Anfrage anfrage) {
         this.id = id;
         this.anfrage = anfrage;
-        this.manager = "";
-        this.status = "";
+        this.manager = null;
         this.aenderungen = new LinkedList<>();
     }
 
-    public Auftrag(int id, Anfrage anfrage, String manager, String status, List<Aenderung> aenderungen) {
+    public Auftrag(int id, Anfrage anfrage, Manager manager, List<Aenderung> aenderungen) {
         this.id = id;
         this.anfrage = anfrage;
         this.manager = manager;
-        this.status = status;
         this.aenderungen = aenderungen;
     }
 
@@ -38,13 +35,8 @@ public class Auftrag {
         this.id = id;
     }
 
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-        aenderungen.add(new Aenderung(status, LocalDateTime.now()));
+    public void setStatus(String titel, String status) {
+        aenderungen.add(new Aenderung(new Status(titel, status), LocalDateTime.now()));
     }
 
     public List<Aenderung> getAenderungen() {
@@ -55,13 +47,13 @@ public class Auftrag {
         this.aenderungen = aenderungen;
     }
 
-    public String getManager() {
+    public Manager getManager() {
         return manager;
     }
 
-    public void setManager(String manager) {
+    public void setManager(Manager manager) {
         this.manager = manager;
-        aenderungen.add(new Aenderung("Manager = " + manager, LocalDateTime.now()));
+        aenderungen.add(new Aenderung(new Status("Angenommen",manager + " hat die Anfragte angenommen"), LocalDateTime.now()));
     }
 
     public Anfrage getAnfrage() {
