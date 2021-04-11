@@ -77,4 +77,16 @@ public class Anfrage {
         this.information = information;
     }
 
+    @Override
+    public String toString() {
+        return "\n Anfrage{" +
+                "\n firma=" + firma +
+                "\n leistung=" + leistung +
+                "\n sendung=" + sendung +
+                "\n ladestelle=" + ladestelle +
+                "\n entladestelle=" + entladestelle +
+                "\n rueckverladung=" + rueckverladung +
+                "\n information='" + information +
+                "\n }";
+    }
 }

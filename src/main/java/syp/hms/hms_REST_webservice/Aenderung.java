@@ -13,4 +13,12 @@ public class Aenderung {
 
     public Aenderung() {
     }
+
+    @Override
+    public String toString() {
+        return "Aenderung{" +
+                "status=" + status +
+                ", datum=" + datum +
+                '}';
+    }
 }

@@ -1,13 +1,45 @@
 package syp.hms.hms_REST_webservice;
 
+import org.postgresql.util.PSQLException;
+
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
-import java.time.format.DateTimeFormatter;
 
 public class DAL {
+
+    public void insertLands(List<Land> landList) throws SQLException, ClassNotFoundException {
+        String sql = "DELETE FROM land";
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ps.execute();
+
+        sql = "INSERT INTO land (kuerzel, bezeichnung) " +
+                "VALUES (?,?)";
+        ps = Database.getInstance().getPreparedStatement(sql);
+        for (int i=0; i<landList.size(); i++){
+            ps.setString(1, landList.get(i).getCode());
+            ps.setString(2, landList.get(i).getName());
+            System.out.println(landList.get(i).getCode()+", "+landList.get(i).getName());
+            ps.execute();
+        }
+    }
+
+    public List<Land> getAllLands() throws SQLException, ClassNotFoundException {
+        LinkedList<Land> list = new LinkedList<>();
+
+        String sql = "SELECT * " +
+                "FROM land";
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ResultSet rs = ps.executeQuery();
+
+        while (rs.next()){
+            list.add(new Land(rs.getString("kuerzel"), rs.getString("bezeichnung")));
+        }
+
+        return list;
+    }
 
     public List<Auftrag> getAll() throws SQLException, ClassNotFoundException {
         LinkedList<Auftrag> list = new LinkedList<>();
@@ -24,11 +56,53 @@ public class DAL {
         return list;
     }
 
-    public Auftrag getAuftrag(int id) throws SQLException, ClassNotFoundException {
-        //--Aenderungen
+    public Manager getManager(int id) throws SQLException, ClassNotFoundException {
+        String sql =   "SELECT managerId " +
+                "FROM sofortanfrage " +
+                "WHERE anfrageId = ?";
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ps.setInt(1, id);
+        ResultSet rs = ps.executeQuery();
+        rs.next();
+        int managerId = rs.getInt("managerId");
+
+        sql =   "SELECT vorname, nachname, position, telefon, email " +
+                "FROM manager " +
+                "WHERE managerId = ?";
+        ps = Database.getInstance().getPreparedStatement(sql);
+        ps.setInt(1, managerId);
+        rs = ps.executeQuery();
+        rs.next();
+        Manager manager = new Manager(managerId, rs.getString("vorname"), rs.getString("nachname"), rs.getString("position"), rs.getString("telefon"), rs.getString("email"));
+
+        return manager;
+    }
+
+    public Aenderung getStatus(int id) throws SQLException, ClassNotFoundException {
         String sql = "SELECT * " +
-                     "FROM aenderung " +
-                     "WHERE anfrageid = ?";
+                "FROM aenderung " +
+                "WHERE anfrageId = ? " +
+                "AND datumUhrzeit = (SELECT MAX(datumUhrzeit) " +
+                                    "FROM aenderung " +
+                                    "WHERE anfrageId = ?)";
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ps.setInt(1, id);
+        ps.setInt(2, id);
+        ResultSet rs = ps.executeQuery();
+        rs.next();
+
+        String datum = rs.getString("datumuhrzeit");
+        String[] tokens = datum.split(" ");
+        datum = tokens[0] + "T"+ tokens[1];
+        Aenderung status = new Aenderung(new Status(rs.getString("titel"), rs.getString("bezeichnung")), LocalDateTime.parse(datum));
+
+        return status;
+    }
+
+    public List<Aenderung> getAenderungen(int id) throws SQLException, ClassNotFoundException {
+        String sql = "SELECT * " +
+                "FROM aenderung " +
+                "WHERE anfrageid = ?";
         PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
         ResultSet rs = ps.executeQuery();
@@ -41,16 +115,48 @@ public class DAL {
             aenderungList.add(new Aenderung(new Status(rs.getString("titel"), rs.getString("bezeichnung")), LocalDateTime.parse(datum)));
         }
 
-        //--Manager-Status-informationen
-        sql =   "SELECT manager, informationen " +
+        return aenderungList;
+    }
+
+    public List<Manager> getAllManager() throws SQLException, ClassNotFoundException {
+        String sql = "SELECT * " +
+                     "FROM manager";
+
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ResultSet rs = ps.executeQuery();
+
+        LinkedList<Manager> managerList = new LinkedList<>();
+        while (rs.next()){
+            ps = Database.getInstance().getPreparedStatement(sql);
+            rs = ps.executeQuery();
+            rs.next();
+            managerList.add(new Manager(rs.getInt("managerId"),rs.getString("vorname"), rs.getString("nachname"), rs.getString("position"), rs.getString("telefon"), rs.getString("email")));
+        }
+
+        return managerList;
+    }
+
+    public Auftrag getAuftrag(int id) throws SQLException, ClassNotFoundException {
+        //--Aenderungen
+        List<Aenderung> aenderungList = getAenderungen(id);
+
+        //--Informationen
+        String sql =   "SELECT informationen " +
                 "FROM sofortanfrage " +
                 "WHERE anfrageId = ?";
-        ps = Database.getInstance().getPreparedStatement(sql);
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, id);
-        rs = ps.executeQuery();
+        ResultSet rs = ps.executeQuery();
         rs.next();
-        Manager manager = new Manager(rs.getString("manager"));
         String informationen = rs.getString("informationen");
+
+        Manager manager;
+        //--Manager
+        try {
+            manager = getManager(id);
+        }catch (PSQLException e){
+            manager = null;
+        }
 
         //--Unternehmen
         sql =   "SELECT unternehmenId " +
@@ -104,7 +210,7 @@ public class DAL {
             stadt = rs.getString("stadt");
             land = rs.getString("land");
             start = LocalDate.parse(rs.getString("startdate"));
-            start = LocalDate.parse(rs.getString("enddate"));
+            ende = LocalDate.parse(rs.getString("enddate"));
         }catch (SQLException e){
             messelogistik = false;
         }
@@ -189,37 +295,35 @@ public class DAL {
             rueckverladung = new Rueckverladung(false, null);
         }
 
-        //--teilpartien
+        //--sendung
         boolean asTeilpartien;
-        List<Teilpartie> teilpartien = new LinkedList<>();
+        int komplettladungid = 0;
         try {
-            sql =   "SELECT anzahl, inhalt, laenge, breite, hoehe, gewicht " +
-                    "FROM anfrageteilpartie at INNER JOIN teilpartie t ON at.teilpartieId = t.teilpartieId " +
+            sql =   "SELECT komplettladungId " +
+                    "FROM sofortanfrage " +
                     "WHERE anfrageId = ?";
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setInt(1, id);
             rs = ps.executeQuery();
-            while(rs.next()){
-                teilpartien.add(new Teilpartie(rs.getInt("anzahl"), rs.getString("inhalt"), rs.getDouble("laenge"),
-                        rs.getDouble("breite"), rs.getDouble("hoehe"), rs.getDouble("gewicht")));
-            }
-            asTeilpartien = true;
-        }catch (SQLException e){
-            teilpartien = null;
+            rs.next();
+            komplettladungid = rs.getInt("komplettladungId");
             asTeilpartien = false;
+        } catch (SQLException e){
+            asTeilpartien = true;
         }
 
-        //--komplettpartie
         String ladungsart = null;
         int anzahl = 0;
         boolean versicherung = false;
         String angabe = null;
-        if(!asTeilpartien){
+        List<Teilpartie> teilpartien = null;
+
+        if (!asTeilpartien){
             sql =   "SELECT bezeichnung, anzahl, versicherung, angabe " +
                     "FROM komplettladung k INNER JOIN ladungsart l ON k.ladungsartId = l.ladungsartId " +
                     "WHERE komplettladungId = (SELECT komplettladungId " +
-                                              "FROM sofortanfrage " +
-                                              "WHERE anfrageId = ?)";
+                    "FROM sofortanfrage " +
+                    "WHERE anfrageId = ?)";
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setInt(1, id);
             rs = ps.executeQuery();
@@ -229,7 +333,26 @@ public class DAL {
             anzahl = rs.getInt("anzahl");
             versicherung = rs.getBoolean("versicherung");
             angabe =  rs.getString("angabe");
+        }else {
+            teilpartien = new LinkedList<>();
+            try {
+                sql =   "SELECT anzahl, inhalt, laenge, breite, hoehe, gewicht " +
+                        "FROM anfrageteilpartie at INNER JOIN teilpartie t ON at.teilpartieId = t.teilpartieId " +
+                        "WHERE anfrageId = ?";
+                ps = Database.getInstance().getPreparedStatement(sql);
+                ps.setInt(1, id);
+                rs = ps.executeQuery();
+                while(rs.next()){
+                    teilpartien.add(new Teilpartie(rs.getInt("anzahl"), rs.getString("inhalt"), rs.getDouble("laenge"),
+                            rs.getDouble("breite"), rs.getDouble("hoehe"), rs.getDouble("gewicht")));
+                }
+                asTeilpartien = true;
+            }catch (SQLException e){
+                teilpartien = null;
+                asTeilpartien = false;
+            }
         }
+
         Sendung sendung = new Sendung(asTeilpartien, teilpartien, ladungsart, anzahl, versicherung, angabe);
 
         Anfrage anfrage = new Anfrage(firma, leistung, sendung, ladestelle, entladestelle, rueckverladung, informationen);
@@ -238,6 +361,28 @@ public class DAL {
         rs.close();
         ps.close();
         return auftrag;
+    }
+
+    public void newStatus(int id, Status status) throws SQLException, ClassNotFoundException {
+        String sql = "INSERT INTO aenderung (anfrageid, datumuhrzeit, titel, bezeichnung) " +
+                "VALUES (?,?,?,?)";
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ps.setInt(1, id);
+        ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+        ps.setString(3, status.titel);
+        ps.setString(4, status.status);
+        ps.execute();
+    }
+
+    public void changeManager(int id, int managerId) throws SQLException, ClassNotFoundException {
+        String sql = "UPDATE sofortanfrage SET managerId = ? WHERE anfrageId = ?";
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ps.setInt(1, managerId);
+        ps.setInt(2, id);
+        ps.execute();
+
+        Status status = new Status("Angenommen","Die Anfrage wurde Angenommen");
+        newStatus(id, status);
     }
 
     public int newAuftrag(Anfrage anfrage, Status status) throws SQLException, ClassNotFoundException {
@@ -337,7 +482,7 @@ public class DAL {
         }
 
         //--komplettladung
-        if(!anfrage.getSendung().asTeilpartien()){
+        if(!anfrage.getSendung().isAsTeilpartien()){
             sql = "SELECT ladungsartId FROM ladungsart WHERE bezeichnung = ?";
             ps = Database.getInstance().getPreparedStatement(sql);
             ps.setString(1, anfrage.getSendung().getLadungsArt());
@@ -386,17 +531,15 @@ public class DAL {
         }
 
         //--initial Aenderung
-        sql = "INSERT INTO aenderung (anfrageid, datumuhrzeit, titel, bezeichnung) " +
-                "VALUES (?,?,?,?)";
-        ps = Database.getInstance().getPreparedStatement(sql);
-        ps.setInt(1, id);
-        ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
-        ps.setString(3, status.titel);
-        ps.setString(4, status.status);
-        ps.execute();
-
-        System.out.println(anfrage.toString());
+        newStatus(id,status);
 
         return id;
+    }
+
+    public void deleteAuftrag(int id) throws SQLException, ClassNotFoundException {
+        String sql = "DELETE FROM sofortanfrage WHERE anfrageId = ?";
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ps.setInt(1, id);
+        ps.execute();
     }
 }

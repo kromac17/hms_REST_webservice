@@ -28,4 +28,12 @@ public class Rueckverladung {
     public void setDatum(LocalDateTime datum) {
         this.datum = datum;
     }
+
+    @Override
+    public String toString() {
+        return "Rueckverladung{" +
+                "inkludiert=" + inkludiert +
+                ", datum=" + datum +
+                '}';
+    }
 }

@@ -66,4 +66,16 @@ public class Firma {
     public void setTelefon(String telefon) {
         this.telefon = telefon;
     }
+
+    @Override
+    public String toString() {
+        return "Firma{" +
+                "firmenbezeichnung='" + firmenbezeichnung + '\'' +
+                ", anrede='" + anrede + '\'' +
+                ", vorname='" + vorname + '\'' +
+                ", nachname='" + nachname + '\'' +
+                ", email='" + email + '\'' +
+                ", telefon='" + telefon + '\'' +
+                '}';
+    }
 }

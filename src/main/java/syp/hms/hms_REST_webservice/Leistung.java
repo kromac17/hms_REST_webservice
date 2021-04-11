@@ -88,4 +88,18 @@ public class Leistung {
     public void setTransportArt(String transportArt) {
         this.transportArt = transportArt;
     }
+
+    @Override
+    public String toString() {
+        return "Leistung{" +
+                "transport=" + transport +
+                ", messelogistik=" + messelogistik +
+                ", messe='" + messe + '\'' +
+                ", land='" + land + '\'' +
+                ", stadt='" + stadt + '\'' +
+                ", start=" + start +
+                ", ende=" + ende +
+                ", transportArt='" + transportArt + '\'' +
+                '}';
+    }
 }

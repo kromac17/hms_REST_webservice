@@ -11,4 +11,12 @@ public class Status {
 
     public Status() {
     }
+
+    @Override
+    public String toString() {
+        return "Status{" +
+                "titel='" + titel + '\'' +
+                ", status='" + status + '\'' +
+                '}';
+    }
 }

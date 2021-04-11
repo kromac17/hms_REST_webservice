@@ -66,4 +66,16 @@ public class Teilpartie {
     public void setGewicht(double gewicht) {
         this.gewicht = gewicht;
     }
+
+    @Override
+    public String toString() {
+        return "Teilpartie{" +
+                "anzahl=" + anzahl +
+                ", inhalt='" + inhalt + '\'' +
+                ", laenge=" + laenge +
+                ", breite=" + breite +
+                ", hoehe=" + hoehe +
+                ", gewicht=" + gewicht +
+                '}';
+    }
 }

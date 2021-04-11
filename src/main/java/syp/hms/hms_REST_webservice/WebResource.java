@@ -1,5 +1,8 @@
 package syp.hms.hms_REST_webservice;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -10,32 +13,11 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 @Path("/resource")
 public class WebResource {
-    private static Map<Integer, Auftrag> map;
-    private static AtomicInteger counter = new AtomicInteger();
-
     static
     {
-        map = new ConcurrentHashMap();
-        map.put(1, new Auftrag(1,
-                new Anfrage(
-                    new Firma("Aldrian Stiegen GmbH", "Frau", "Carina", "Aldrian", "carina@stiegen.at", "0660 1234567"),
-                    new Leistung(true, true, "Stadtmesse", "AT", "Graz", LocalDate.now(), LocalDate.now().plusDays(1), "See"),
-                    new Sendung(false, null, "Spezial LKW", 3, true, ""),
-                    new Ladestelle("Austria", "Leibnitz", "8430", LocalDateTime.now()),
-                    new Ladestelle("Austria", "Graz", "8530", LocalDateTime.now().plusDays(1)),
-                    new Rueckverladung(false, null),
-                    ""
-                )
-
-        ));
-        counter.set(1);
         DAL dal = new DAL();
         try {
             int id = dal.newAuftrag(
@@ -54,6 +36,31 @@ public class WebResource {
             e.printStackTrace();
         }
     }
+
+    static Boolean debug = true;
+    @POST
+    @Path("lands")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response insertLands(List<Land> landList) throws SQLException, ClassNotFoundException {
+        if(debug){
+            System.out.println(landList);
+            DAL dal = new DAL();
+            dal.insertLands(landList);
+            return Response.noContent().status(Response.Status.OK).build();
+        }
+        return Response.noContent().status(Response.Status.METHOD_NOT_ALLOWED).build();
+    }
+
+    @GET
+    @Path("lands")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getLands() throws SQLException, ClassNotFoundException {
+        DAL dal = new DAL();
+        List<Land> landList = dal.getAllLands();
+        return Response.ok(landList).build();
+    }
+
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public List<Auftrag> getAllEnquiries() throws SQLException, ClassNotFoundException {
@@ -66,12 +73,13 @@ public class WebResource {
     @GET
     @Path("{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getEnquirieById(@PathParam("id") int id) throws ClassNotFoundException, SQLException {
+    public Response getEnquirieById(@PathParam("id") int id) throws ClassNotFoundException {
         DAL dal = new DAL();
-
-        Auftrag auftrag = dal.getAuftrag(id);
-        if(auftrag ==null)
-        {
+        Auftrag auftrag;
+        try {
+            auftrag = dal.getAuftrag(id);
+        } catch (SQLException e) {
+            System.out.println(e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
         return Response.ok(auftrag).build();
@@ -80,14 +88,14 @@ public class WebResource {
     @DELETE
     @Path("{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteEnquirie(@PathParam("id") int id)
-    {
-        Auftrag auftrag = map.get(id);
-        if(auftrag ==null)
-        {
+    public Response deleteEnquirie(@PathParam("id") int id) throws ClassNotFoundException {
+        DAL dal = new DAL();
+        try {
+            dal.deleteAuftrag(id);
+        } catch (SQLException e) {
+            System.out.println(e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
-        map.remove(id);
         return Response.noContent().status(Response.Status.OK).build();
     }
 
@@ -104,6 +112,7 @@ public class WebResource {
         return Response.noContent().status(Response.Status.NOT_FOUND).build();
     }
 
+    /*
     @PUT
     @Path("{id}")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -121,94 +130,92 @@ public class WebResource {
             return Response.noContent().status(Response.Status.OK).build();
         }
     }
+    */
 
-    @PUT
-    @Path("{id}/manager")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response updateManager(@PathParam("id") int id, Manager manager)
-    {
-        Auftrag auftrag = map.get(id);
-        if(auftrag == null) {
+    @GET
+    @Path("manager")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getAllManager() throws ClassNotFoundException {
+        DAL dal = new DAL();
+        List<Manager> managerList;
+        try {
+            managerList = dal.getAllManager();
+        } catch (SQLException e) {
+            System.out.println(e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
-        else {
-            auftrag.setId(id);
-            auftrag.setManager(manager);
-            map.put(id, auftrag);
-            return Response.noContent().status(Response.Status.OK).build();
-        }
+        return Response.ok(managerList).build();
     }
 
     @GET
     @Path("{id}/manager")
-    public Response getManager(@PathParam("id") int id)
-    {
-        Auftrag auftrag = map.get(id);
-        if(auftrag ==null || auftrag.getManager() == null || auftrag.getManager().equals(""))
-        {
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getManager(@PathParam("id") int id) throws ClassNotFoundException {
+        DAL dal = new DAL();
+        Manager manager;
+        try {
+            manager = dal.getManager(id);
+        } catch (SQLException e) {
+            System.out.println(e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
-        return Response.ok(auftrag.getManager()).build();
+        return Response.ok(manager).build();
+    }
+
+    @PUT
+    @Path("{id}/manager/{managerId}")
+    public Response updateManager(@PathParam("id") int id, @PathParam("managerId") int managerId) throws ClassNotFoundException {
+        DAL dal = new DAL();
+        try {
+            dal.changeManager(id, managerId);
+        } catch (SQLException e) {
+            System.out.println(e);
+            return Response.noContent().status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.noContent().status(Response.Status.OK).build();
     }
 
     @PUT
     @Path("{id}/status")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response updateStatus(@PathParam("id") int id, Aenderung aenderung)
-    {
-        Auftrag auftrag = map.get(id);
-        if(auftrag == null) {
+    public Response updateStatus(@PathParam("id") int id, Status status) throws ClassNotFoundException {
+        DAL dal = new DAL();
+        try {
+            dal.newStatus(id, status);
+        } catch (SQLException e) {
+            System.out.println(e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
-        else {
-            auftrag.setId(id);
-            auftrag.setStatus(aenderung.status.titel, aenderung.status.status);
-            map.put(id, auftrag);
-            return Response.noContent().status(Response.Status.OK).build();
-        }
+        return Response.noContent().status(Response.Status.OK).build();
     }
 
     @GET
-    @Path("{id}/status/list")
+    @Path("{id}/aenderungen")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getStatusList(@PathParam("id") int id)
-    {
-        Auftrag auftrag = map.get(id);
-        if(auftrag ==null || auftrag.getAenderungen() == null || auftrag.getAenderungen().equals(""))
-        {
+    public Response getAenderungen(@PathParam("id") int id) throws ClassNotFoundException {
+        DAL dal = new DAL();
+        List<Aenderung> aenderungList;
+        try {
+            aenderungList = dal.getAenderungen(id);
+        } catch (SQLException e) {
+            System.out.println(e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
-        List<Aenderung> list = auftrag.getAenderungen();
-        return Response.ok(list).build();
+        return Response.ok(aenderungList).build();
     }
 
-    @GET
-    @Path("{id}/status/detail")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getStatusDetail(@PathParam("id") int id)
-    {
-        Auftrag auftrag = map.get(id);
-        if(auftrag ==null || auftrag.getAenderungen() == null || auftrag.getAenderungen().equals(""))
-        {
-            return Response.noContent().status(Response.Status.NOT_FOUND).build();
-        }
-        List<Aenderung> list = auftrag.getAenderungen();
-        return Response.ok(list.get(list.size()-1)).build();
-    }
-
-    /*
     @GET
     @Path("{id}/status")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getStatus(@PathParam("id") int id)
-    {
-        Auftrag auftrag = map.get(id);
-        if(auftrag ==null || auftrag.getStatus() == null || auftrag.getStatus().equals(""))
-        {
+    public Response getStatus(@PathParam("id") int id) throws ClassNotFoundException {
+        DAL dal = new DAL();
+        Aenderung status;
+        try {
+            status = dal.getStatus(id);
+        } catch (SQLException e) {
+            System.out.println(e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
-        return Response.ok(auftrag.getStatus()).build();
+        return Response.ok(status).build();
     }
-
-     */
 }

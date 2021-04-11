@@ -48,4 +48,14 @@ public class Ladestelle {
     public void setDatum(LocalDateTime datum) {
         this.datum = datum;
     }
+
+    @Override
+    public String toString() {
+        return "Ladestelle{" +
+                "land='" + land + '\'' +
+                ", stadt='" + stadt + '\'' +
+                ", plz='" + plz + '\'' +
+                ", datum=" + datum +
+                '}';
+    }
 }

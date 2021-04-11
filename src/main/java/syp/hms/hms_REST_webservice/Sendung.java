@@ -21,7 +21,7 @@ public class Sendung {
 
     public Sendung() {}
 
-    public boolean asTeilpartien() {
+    public boolean isAsTeilpartien() {
         return asTeilpartien;
     }
 
@@ -67,5 +67,17 @@ public class Sendung {
 
     public void setEigeneAngabe(String eigeneAngabe) {
         this.eigeneAngabe = eigeneAngabe;
+    }
+
+    @Override
+    public String toString() {
+        return "Sendung{" +
+                "asTeilpartien=" + asTeilpartien +
+                ", teilpartien=" + teilpartien +
+                ", ladungsArt='" + ladungsArt + '\'' +
+                ", anzahl=" + anzahl +
+                ", versicherung=" + versicherung +
+                ", eigeneAngabe='" + eigeneAngabe + '\'' +
+                '}';
     }
 }
