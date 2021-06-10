@@ -69,13 +69,13 @@ public class Teilpartie {
 
     @Override
     public String toString() {
-        return "Teilpartie{" +
-                "anzahl=" + anzahl +
-                ", inhalt='" + inhalt + '\'' +
-                ", laenge=" + laenge +
-                ", breite=" + breite +
-                ", hoehe=" + hoehe +
-                ", gewicht=" + gewicht +
-                '}';
+        return "<tr>" +
+                "<td>Anzahl: "+anzahl+"</td>" +
+                "<td>Inhalt: "+inhalt+"</td>" +
+                "<td>Laenge: "+laenge+"</td>" +
+                "<td>Breite: "+breite+"</td>" +
+                "<td>Höhe: "+hoehe+"</td>" +
+                "<td>Gewicht: "+gewicht+"</td>" +
+                "</tr>";
     }
 }

@@ -1,6 +1,7 @@
 package syp.hms.hms_REST_webservice;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class Ladestelle {
     private String land;
@@ -51,11 +52,6 @@ public class Ladestelle {
 
     @Override
     public String toString() {
-        return "Ladestelle{" +
-                "land='" + land + '\'' +
-                ", stadt='" + stadt + '\'' +
-                ", plz='" + plz + '\'' +
-                ", datum=" + datum +
-                '}';
+        return land +", "+plz+" "+stadt+" - "+datum.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
     }
 }

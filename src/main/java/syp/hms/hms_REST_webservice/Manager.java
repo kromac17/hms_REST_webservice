@@ -1,5 +1,9 @@
 package syp.hms.hms_REST_webservice;
 
+import org.postgresql.util.Base64;
+
+import java.io.File;
+
 public class Manager {
     private int id;
     private String vorname;
@@ -71,7 +75,8 @@ public class Manager {
     @Override
     public String toString() {
         return "Manager{" +
-                "vorname='" + vorname + '\'' +
+                "id=" + id +
+                ", vorname='" + vorname + '\'' +
                 ", nachname='" + nachname + '\'' +
                 ", position='" + position + '\'' +
                 ", telefon='" + telefon + '\'' +

@@ -2,6 +2,9 @@ package syp.hms.hms_REST_webservice;
 
 import org.postgresql.util.PSQLException;
 
+import java.io.File;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,6 +12,29 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class DAL {
+    public boolean login(int username, String password) throws SQLException, ClassNotFoundException, NoSuchAlgorithmException {
+        PreparedStatement ps = Database.getInstance().getPreparedStatement("SELECT password FROM manager WHERE managerid=?");
+        ps.setInt(1,username);
+        ResultSet rs = ps.executeQuery();
+        rs.next();
+        String hashFromDB = rs.getString("password");
+
+        MessageDigest alg = MessageDigest.getInstance("SHA-256");
+        alg.update(password.getBytes());
+
+        byte[] hash = alg.digest();
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0; i<hash.length; i++)
+        {
+            sb.append(String.format("%02X", hash[i]&0xFF));
+        }
+        String hashFromPW = sb.toString();
+
+        if(hashFromDB.toUpperCase().equals(hashFromPW))
+            return true;
+
+        return false;
+    }
 
     public void insertLands(List<Land> landList) throws SQLException, ClassNotFoundException {
         String sql = "DELETE FROM land";
@@ -127,9 +153,6 @@ public class DAL {
 
         LinkedList<Manager> managerList = new LinkedList<>();
         while (rs.next()){
-            ps = Database.getInstance().getPreparedStatement(sql);
-            rs = ps.executeQuery();
-            rs.next();
             managerList.add(new Manager(rs.getInt("managerId"),rs.getString("vorname"), rs.getString("nachname"), rs.getString("position"), rs.getString("telefon"), rs.getString("email")));
         }
 
@@ -371,6 +394,20 @@ public class DAL {
         ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
         ps.setString(3, status.titel);
         ps.setString(4, status.status);
+        ps.execute();
+    }
+
+    public void changeManagerData(Manager manager) throws SQLException, ClassNotFoundException {
+        String sql = "UPDATE manager SET vorname = ?, nachname = ?, position = ?, telefon = ?, email = ? WHERE managerId = ?";
+        System.out.println(sql);
+
+        PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
+        ps.setString(1, manager.getVorname());
+        ps.setString(2, manager.getNachname());
+        ps.setString(3, manager.getPosition());
+        ps.setString(4, manager.getTelefon());
+        ps.setString(5, manager.getEmail());
+        ps.setInt(6, manager.getId());
         ps.execute();
     }
 

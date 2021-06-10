@@ -1,7 +1,6 @@
 package syp.hms.hms_REST_webservice;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.xml.internal.ws.api.model.wsdl.WSDLOutput;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -18,6 +17,7 @@ import java.util.List;
 public class WebResource {
     static
     {
+        System.out.println("Jetzt erst mal ruhe hier");
         DAL dal = new DAL();
         try {
             int id = dal.newAuftrag(
@@ -38,6 +38,7 @@ public class WebResource {
     }
 
     static Boolean debug = true;
+
     @POST
     @Path("lands")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -141,7 +142,7 @@ public class WebResource {
         try {
             managerList = dal.getAllManager();
         } catch (SQLException e) {
-            System.out.println(e);
+            System.out.println("getAllManager: " + e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
         return Response.ok(managerList).build();
@@ -168,6 +169,20 @@ public class WebResource {
         DAL dal = new DAL();
         try {
             dal.changeManager(id, managerId);
+        } catch (SQLException e) {
+            System.out.println(e);
+            return Response.noContent().status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.noContent().status(Response.Status.OK).build();
+    }
+
+    @PUT
+    @Path("manager")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateManagerData(Manager manager) throws ClassNotFoundException {
+        DAL dal = new DAL();
+        try {
+            dal.changeManagerData(manager);
         } catch (SQLException e) {
             System.out.println(e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();

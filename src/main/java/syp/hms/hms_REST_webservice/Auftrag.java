@@ -4,19 +4,11 @@ import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
 
-public class Auftrag {
+public class Auftrag implements Comparable{
     private int id;
     private Anfrage anfrage;
     private Manager manager;
     private List<Aenderung> aenderungen;
-
-    //löschen
-    public Auftrag(int id, Anfrage anfrage) {
-        this.id = id;
-        this.anfrage = anfrage;
-        this.manager = null;
-        this.aenderungen = new LinkedList<>();
-    }
 
     public Auftrag(int id, Anfrage anfrage, Manager manager, List<Aenderung> aenderungen) {
         this.id = id;
@@ -62,5 +54,14 @@ public class Auftrag {
 
     public void setAnfrage(Anfrage anfrage) {
         this.anfrage = anfrage;
+    }
+
+    @Override
+    public int compareTo(Object other) {
+        Auftrag a = (Auftrag) other;
+        if(this.getId() > a.getId())
+            return 1;
+        else
+            return -1;
     }
 }
