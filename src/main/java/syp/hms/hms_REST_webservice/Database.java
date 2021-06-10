@@ -11,7 +11,7 @@ public class Database {
     private Database() throws ClassNotFoundException, SQLException {
         Class.forName("org.postgresql.Driver");
         System.out.println("Des is des Richtige: 5432");
-        String ip = "db"; //TODO: change to db when uploaded
+        String ip = "localhost"; //TODO: change to db when uploaded
         try {
             InetAddress address = InetAddress.getByName(ip);
             System.out.println(address.getHostAddress());
