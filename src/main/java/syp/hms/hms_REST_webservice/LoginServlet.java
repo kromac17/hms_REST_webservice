@@ -12,6 +12,7 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.setAttribute("loggedIn", false);
+        request.setAttribute("manager", 0);
         request.getRequestDispatcher("Homepage.jsp").forward(request, response);
     }
 
@@ -19,6 +20,7 @@ public class LoginServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         int managernum = Integer.parseInt(request.getParameter("mnum"));
         String password = request.getParameter("psw");
+
 
         System.out.println(managernum);
         System.out.println(password);
@@ -30,6 +32,7 @@ public class LoginServlet extends HttpServlet {
 
             if (loggedIn){
                 request.setAttribute("loggedIn", true);
+                request.setAttribute("manager", managernum);
 
                 try {
                     request.setAttribute("anfragen", dal.getAll());

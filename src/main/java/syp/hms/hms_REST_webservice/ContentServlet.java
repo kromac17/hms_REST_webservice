@@ -17,6 +17,7 @@ public class ContentServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.setAttribute("loggedIn", request.getAttribute("loggedIn"));
+        request.setAttribute("manager", request.getAttribute("manager"));
         try {
             request.setAttribute("anfragen", dal.getAll());
         } catch (SQLException | ClassNotFoundException throwables) {

@@ -165,15 +165,17 @@ public class WebResource {
 
     @PUT
     @Path("{id}/manager/{managerId}")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response updateManager(@PathParam("id") int id, @PathParam("managerId") int managerId) throws ClassNotFoundException {
         DAL dal = new DAL();
+        String manager_name;
         try {
-            dal.changeManager(id, managerId);
+            manager_name = dal.changeManager(id, managerId);
         } catch (SQLException e) {
             System.out.println(e);
             return Response.noContent().status(Response.Status.NOT_FOUND).build();
         }
-        return Response.noContent().status(Response.Status.OK).build();
+        return Response.ok(manager_name).build();
     }
 
     @PUT

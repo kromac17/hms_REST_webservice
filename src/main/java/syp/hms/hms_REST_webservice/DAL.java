@@ -2,7 +2,6 @@ package syp.hms.hms_REST_webservice;
 
 import org.postgresql.util.PSQLException;
 
-import java.io.File;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
@@ -411,7 +410,7 @@ public class DAL {
         ps.execute();
     }
 
-    public void changeManager(int id, int managerId) throws SQLException, ClassNotFoundException {
+    public String changeManager(int id, int managerId) throws SQLException, ClassNotFoundException {
         String sql = "UPDATE sofortanfrage SET managerId = ? WHERE anfrageId = ?";
         PreparedStatement ps = Database.getInstance().getPreparedStatement(sql);
         ps.setInt(1, managerId);
@@ -420,6 +419,9 @@ public class DAL {
 
         Status status = new Status("Angenommen","Die Anfrage wurde Angenommen");
         newStatus(id, status);
+
+        Manager manager = getManager(id);
+        return manager.getVorname()+" "+manager.getNachname();
     }
 
     public int newAuftrag(Anfrage anfrage, Status status) throws SQLException, ClassNotFoundException {

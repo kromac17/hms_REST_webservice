@@ -14,6 +14,7 @@
 <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
 <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
 <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="javascript/page.js"></script>
 <html lang="de">
 <title>HMS</title>
 <meta charset="UTF-8">
@@ -75,6 +76,7 @@
         try{
             boolean loggedIn = (boolean) request.getAttribute("loggedIn");
             if(loggedIn){
+                int manager_id = (int) request.getAttribute("manager");
     %>
     <!-- Anfrage Section -->
     <div class="w3-container w3-padding-32" id="table">
@@ -99,16 +101,16 @@
 
                 for(int i=0;i<anfragen.size();i++){
                     out.println("<tr>\n");
-                    out.println("<td>"+anfragen.get(i).getId()+"</td>\n");
+                    out.println("<td class=\"num\">"+anfragen.get(i).getId()+"</td>\n");
                     try{
-                        out.println("<td>"+anfragen.get(i).getManager().getVorname()+" "+anfragen.get(i).getManager().getNachname()+"</td>\n");
+                        out.println("<td class=\"manager\">"+anfragen.get(i).getManager().getVorname()+" "+anfragen.get(i).getManager().getNachname()+"</td>\n");
                     }catch (NullPointerException ex){
-                        out.println("<td>---</td>");
+                        out.println("<td class=\"manager\">---</td>");
                     }
                     try{
                         out.println("<td class=\"info\">"+anfragen.get(i).getAnfrage().getInformation()+"</td>\n");
                     }catch (NullPointerException ex){
-                        out.println("<td>---</td>");
+                        out.println("<td class=\"info\">---</td>");
                     }
 
                     out.println(
@@ -188,16 +190,15 @@
                                         "</td>"
                         );
                     }
-                    out.println("<td>" +
-                                "   <label for=\"success\" class=\"btn btn-default\">Angenommen<input type=\"checkbox\" id=\"success\" class=\"badgebox\"><span class=\"badge\">&check;</span></label>"+
-                                "</td>");
+                    if(anfragen.get(i).getManager() == null)
+                        out.println("<td class=\"check\" id=\"ck_"+anfragen.get(i).getId()+"\" onclick=\"checkbox("+anfragen.get(i).getId()+", "+manager_id+")\"><p class=\"check-text\">Angenommen</p></td>");
+                    else
+                        out.println("<td class=\"check\" id=\"ck_"+anfragen.get(i).getId()+"\" onclick=\"checkbox("+anfragen.get(i).getId()+", "+manager_id+")\"><p class=\"check-text\" style=\"background-color: green\">Angenommen</p></td>");
 
                     out.println("</tr>");
                 }
             %>
-            <td>
 
-            </td>
         </table>
     </div>
     <%       }
